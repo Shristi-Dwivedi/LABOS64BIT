@@ -1,16 +1,22 @@
-ENTRY(start)
+
 
 SECTIONS
 {
     . = 1M;
 
-    .boot :
-    {
-        KEEP(*(.multiboot_header))
+    .multiboot2 ALIGN(8) : {
+        KEEP(*(.multiboot2))
     }
 
-    .text :
-    {
-        *(.text)
+    .text : {
+        *(.text*)
+    }
+
+    .rodata : {
+        *(.rodata*)
+    }
+
+    .bss : {
+        *(.bss*)
     }
 }
