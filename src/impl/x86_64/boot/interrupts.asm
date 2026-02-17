@@ -1,19 +1,31 @@
-global isr_timer
-global isr_keyboard
+global keyboard_handler_stub
+global timer_handler_stub
+global isr_default
 
-extern timer_handler
-extern keyboard_handler
+extern keyboard_handler_c
+extern timer_handler_c
 
-section .text
-
-isr_timer:
-    push rbp
-    call timer_handler
-    pop rbp
+keyboard_handler_stub:
+    push rax
+    push rcx
+    push rdx
+    call keyboard_handler_c
+    pop rdx
+    pop rcx
+    pop rax
     iretq
 
-isr_keyboard:
-    push rbp
-    call keyboard_handler
-    pop rbp
+timer_handler_stub:
+    push rax
+    push rcx
+    push rdx
+    call timer_handler_c
+    pop rdx
+    pop rcx
+    pop rax
+    iretq
+
+isr_default:
+    cli
+    hlt
     iretq

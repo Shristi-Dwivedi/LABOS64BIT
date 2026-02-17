@@ -1,5 +1,7 @@
-#include "pic.h"
+#include <stdint.h>
 
-void timer_handler(){
-    pic_send_eoi(0);
+extern void outb(uint16_t port, uint8_t val);
+
+void timer_handler_c() {
+    outb(0x20, 0x20);
 }

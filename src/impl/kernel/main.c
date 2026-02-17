@@ -1,22 +1,29 @@
-#include "print.h"
-#include "idt.h"
-#include "keyboard.h"
-#include "io.h"
-#include "pic.h"
+#include <stdint.h>
+#include "multiboot2.h"
+#include "framebuffer.h"
 #include "console.h"
+#include "pic.h"
+#include "keyboard.h"
 
-void kernel_main(uint16_t mb_addr){
-    vga_clear();
-    vga_print("Welcome to LABOS\n");
-    vga_print("Start Typing\n");
-    idt_init();
+extern void init_idt();
+extern void pic_remap();
+extern void pic_unmask(uint8_t irq);
+
+void kernel_main(uint64_t magic, uint64_t addr)
+{
+    fb_clear();
+    parse_multiboot2(addr); // framebuffer filled here
+    console_init();
+    // console_write("LABOS started! Press Enter to start typing ...\n");
+    // console_putc('A');
     pic_remap();
-    pic_unmask_irq(0);
-    pic_unmask_irq(1);
-    keyboard_init();
+    init_idt();
+    pic_unmask(0);
+    pic_unmask(1);
+    __asm__ volatile("sti"); // enable interrupts
 
-    asm volatile("sti");    // enable interrupts
-    while(1){
-        asm volatile("hlt");
+    while (1)
+    {
+        __asm__ volatile("hlt");
     }
 }

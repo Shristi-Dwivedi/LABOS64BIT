@@ -1,40 +1,113 @@
 #include "console.h"
+#include "framebuffer.h"
 
-extern void framebuffer_detect(uint64_t);
-extern int framebuffer_available;
+#define SCREEN_WIDTH 1024
 
-extern void vga_print(const char*);
-extern void vga_clear(void);
+// Use the existing framebuffer_info `screen`
+extern struct framebuffer_info screen;
+static void draw_cursor(void);
+static void erase_cursor(void);
 
-extern void fb_console_init(void);
-extern void fb_console_write(const char*);
-extern void fb_console_clear(void);
+// Cursor position
+static int cursor_x = 0;
+static int cursor_y = 0;
+static uint32_t fg_color = 0xFFFFFF;
+static uint32_t bg_color = 0x000000;
 
-static int use_framebuffer = 0;
-
-void console_init(uint64_t mb_addr)
+void console_init()
 {
-    framebuffer_detect(mb_addr);
+    cursor_x = 0;
+    cursor_y = 0;
 
-    if (framebuffer_available)
+    // Clear screen
+    for (uint32_t y = 0; y < screen.height; y++)
     {
-        use_framebuffer = 1;
-        fb_console_init();
+        for (uint32_t x = 0; x < screen.width; x++)
+        {
+            fb_put_pixel(x, y, 0x000000); // black background
+        }
     }
 }
 
-void console_write(const char* str)
+void console_write(const char *str)
 {
-    if (use_framebuffer)
-        fb_console_write(str);
-    else
-        vga_print(str);
+    while (*str)
+    {
+        fb_draw_char(cursor_x, cursor_y, *str++, 0x00FF00);
+        cursor_x += 8; // character width
+        if (cursor_x + 8 > screen.width)
+        {
+            cursor_x = 0;
+            cursor_y += 16;
+            if (cursor_y + 16 > screen.height)
+                cursor_y = 0;
+        }
+    }
 }
 
-void console_clear(void)
+void console_putc(char c)
 {
-    if (use_framebuffer)
-        fb_console_clear();
+    erase_cursor();
+
+    if (c == '\n')
+    {
+        cursor_x = 0;
+        cursor_y += CHAR_CELL_HEIGHT + FB_CHAR_HEIGHT;
+    }
     else
-        vga_clear();
+    {
+        fb_draw_char(cursor_x, cursor_y, c, fg_color);
+        cursor_x += CHAR_CELL_WIDTH;
+    }
+
+    if (cursor_x + FB_CHAR_WIDTH > screen.width)
+    {
+        cursor_x = 0;
+        cursor_y += FB_CHAR_HEIGHT;
+    }
+
+    if (cursor_y + FB_CHAR_HEIGHT > screen.height)
+    {
+        cursor_y = 0;
+    }
+
+    draw_cursor();
+}
+
+void console_backspace()
+{
+    erase_cursor();
+    if (cursor_x >= CHAR_CELL_WIDTH)
+    {
+        cursor_x -= CHAR_CELL_WIDTH;
+
+        for (int y = 0; y < CHAR_CELL_HEIGHT + FB_CHAR_HEIGHT; y++)
+            for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+                fb_put_pixel(cursor_x + x, cursor_y + y, bg_color);
+    }
+
+    draw_cursor();
+}
+
+// Cursor Moving Functions
+void draw_cursor()
+{
+    for (int y = 0; y < CHAR_CELL_HEIGHT; y++)
+    {
+        for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+        {
+            fb_put_pixel(cursor_x + x, cursor_y + y, 0xAAAAAA);
+        }
+    }
+}
+
+void erase_cursor()
+{
+    for (int y = 0; y < CHAR_CELL_HEIGHT; y++)
+    {
+        for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+        {
+            fb_put_pixel(cursor_x + x, cursor_y + y, bg_color);
+        }
+    }
 }
