@@ -1,19 +1,14 @@
-#include <stdint.h>
-
-extern uint64_t fb_addr;
-extern uint32_t fb_width;
-extern uint32_t fb_height;
-extern uint32_t fb_pitch;
+#include "framebuffer.h"
 
 static uint32_t* fb;
 
 void fb_console_init()
 {
-    fb = (uint32_t*)fb_addr;
+    fb = screen.addr;
 
-    for (uint32_t y = 0; y < fb_height; y++)
-        for (uint32_t x = 0; x < fb_width; x++)
-            fb[y * (fb_pitch/4) + x] = 0x00000000;
+    for (uint32_t y = 0; y < screen.height; y++)
+        for (uint32_t x = 0; x < screen.width; x++)
+            fb[y * (screen.pitch/4) + x] = 0x00000000; // black
 }
 
 void fb_console_clear()
@@ -28,7 +23,7 @@ void fb_console_write(const char* str)
 
     while (*str)
     {
-        fb[y * (fb_pitch/4) + x] = 0x00FFFFFF;
+        fb[y * (screen.pitch/4) + x] = 0x00FFFFFF; // white
         x += 8;
         str++;
     }

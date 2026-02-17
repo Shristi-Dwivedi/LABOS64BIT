@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-void console_init(uint64_t mb_addr);
+void console_init(void);
 void console_write(const char* str);
-void console_clear(void);
 
 #endif
