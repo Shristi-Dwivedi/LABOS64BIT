@@ -2,11 +2,11 @@
 #include "font.h"
 
 #define DOT_RADIUS 2
-#define DOT_SPACING 2
+#define DOT_SPACING 3
 
-const int FB_CHAR_WIDTH = 12;
-const int FB_CHAR_HEIGHT = 12;
-const int CHAR_SPACING = 2;
+const int FB_CHAR_WIDTH = 15;
+const int FB_CHAR_HEIGHT = 11;
+const int CHAR_SPACING = 3;
 
 static void draw_dot(int cx, int cy, int radius, uint32_t color);
 
@@ -84,7 +84,9 @@ void draw_dot(int cx, int cy, int radius, uint32_t color)
     }
 }
 
-void draw_pattern(int x, int y, int rows, int cols, uint8_t pattern[rows][cols], uint32_t color)
+void draw_pattern(int x, int y, int rows, int cols,
+                  uint8_t pattern[rows][cols],
+                  uint32_t color)
 {
     for (int r = 0; r < rows; r++)
     {
@@ -92,10 +94,12 @@ void draw_pattern(int x, int y, int rows, int cols, uint8_t pattern[rows][cols],
         {
             if (pattern[r][c])
             {
-                int cx = x + (c * DOT_SPACING) + DOT_RADIUS;
-                int cy = y + (r * DOT_SPACING) + DOT_RADIUS;
-
-                draw_dot(cx, cy, DOT_RADIUS, color);
+                draw_dot(
+                    x + c * DOT_SPACING,
+                    y + r * DOT_SPACING,
+                    DOT_RADIUS,
+                    color
+                );
             }
         }
     }

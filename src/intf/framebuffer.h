@@ -16,7 +16,7 @@ extern const int FB_CHAR_WIDTH;
 extern const int FB_CHAR_HEIGHT;
 extern const int CHAR_SPACING;
 #define CHAR_CELL_WIDTH   (FB_CHAR_WIDTH + CHAR_SPACING)
-#define CHAR_CELL_HEIGHT  (FB_CHAR_HEIGHT);
+#define CHAR_CELL_HEIGHT  (FB_CHAR_HEIGHT + CHAR_SPACING)
 
 void fb_init(uint64_t addr, uint32_t width, uint32_t height, uint32_t pitch, uint8_t bpp);
 void fb_put_pixel(uint32_t x, uint32_t y, uint32_t color);

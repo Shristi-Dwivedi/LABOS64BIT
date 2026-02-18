@@ -1,5 +1,6 @@
 #include "console.h"
 #include "framebuffer.h"
+#include "font.h"
 
 #define SCREEN_WIDTH 1024
 
@@ -81,8 +82,8 @@ void console_backspace()
     {
         cursor_x -= CHAR_CELL_WIDTH;
 
-        for (int y = 0; y < CHAR_CELL_HEIGHT + FB_CHAR_HEIGHT; y++)
-            for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+        for (int y = 0; y < CHAR_CELL_HEIGHT+FONT_HEIGHT; y++)
+            for (int x = 0; x < CHAR_CELL_WIDTH+FONT_WIDTH; x++)
                 fb_put_pixel(cursor_x + x, cursor_y + y, bg_color);
     }
 
@@ -92,9 +93,9 @@ void console_backspace()
 // Cursor Moving Functions
 void draw_cursor()
 {
-    for (int y = 0; y < CHAR_CELL_HEIGHT; y++)
+    for (int y = 0; y < CHAR_CELL_HEIGHT+FONT_HEIGHT; y++)
     {
-        for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+        for (int x = 0; x < CHAR_CELL_WIDTH+FONT_WIDTH; x++)
         {
             fb_put_pixel(cursor_x + x, cursor_y + y, 0xAAAAAA);
         }
@@ -103,9 +104,9 @@ void draw_cursor()
 
 void erase_cursor()
 {
-    for (int y = 0; y < CHAR_CELL_HEIGHT; y++)
+    for (int y = -2; y < CHAR_CELL_HEIGHT+FONT_HEIGHT; y++)
     {
-        for (int x = 0; x < CHAR_CELL_WIDTH; x++)
+        for (int x = -2; x < CHAR_CELL_WIDTH+FONT_WIDTH; x++)
         {
             fb_put_pixel(cursor_x + x, cursor_y + y, bg_color);
         }
