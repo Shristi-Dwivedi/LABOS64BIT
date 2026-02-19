@@ -4,6 +4,7 @@
 #include "console.h"
 #include "pic.h"
 #include "keyboard.h"
+#include "shell.h"
 
 extern void init_idt();
 extern void pic_remap();
@@ -14,14 +15,14 @@ void kernel_main(uint64_t magic, uint64_t addr)
     fb_clear();
     parse_multiboot2(addr); // framebuffer filled here
     console_init();
-    // console_write("LABOS started! Press Enter to start typing ...\n");
-    // console_putc('A');
+    console_write("Welcome to LABOS");
     pic_remap();
     init_idt();
     pic_unmask(0);
-    pic_unmask(1);
+    pic_unmask(1); // Unmask keyboard IRQ
     __asm__ volatile("sti"); // enable interrupts
-
+    console_putc('\n');
+    shell_init();
     while (1)
     {
         __asm__ volatile("hlt");

@@ -1,57 +1,82 @@
 #include "framebuffer.h"
-#include "font.h"
+#include "font8x8.h"
 
-#define DOT_RADIUS 2
-#define DOT_SPACING 3
+static int cursor_x = 0;
+static int cursor_y = 0;
 
-const int FB_CHAR_WIDTH = 15;
-const int FB_CHAR_HEIGHT = 11;
-const int CHAR_SPACING = 3;
+// #define COLOR 0x00FF00
+#define fg_color 0xFFFFFF
+#define bg_color 0x000000
 
-static void draw_dot(int cx, int cy, int radius, uint32_t color);
+struct framebuffer_info screen = {0};
 
-// Draw pattern function definition
-void draw_pattern(int x, int y, int rows, int cols,
-                  uint8_t pattern[rows][cols],
-                  uint32_t color);
+// ========================================
+// Draw pixel
+// ========================================
 
 void fb_put_pixel(uint32_t x, uint32_t y, uint32_t color)
 {
     if (x >= screen.width || y >= screen.height)
         return;
 
-    uint8_t bytes_per_pixel = screen.bpp / 8;
-    uint8_t *pixel_ptr = (uint8_t *)screen.addr + (y * screen.pitch) + (x * bytes_per_pixel);
+    uint8_t *pixel =
+        (uint8_t *)screen.addr +
+        y * screen.pitch +
+        x * (screen.bpp / 8);
 
-    if (screen.bpp == 32)
+    *(uint32_t *)pixel = color;
+}
+
+// ========================================
+// Draw character using font8x8_basic
+// ========================================
+
+void fb_draw_char(char c, int x, int y, uint32_t color)
+{
+    unsigned char *glyph = font8x8_basic[(int)c];
+
+    for (int row = 0; row < 8; row++)
     {
-        *(uint32_t *)pixel_ptr = color;
-    }
-    else if (screen.bpp == 24)
-    {
-        pixel_ptr[0] = color & 0xFF;
-        pixel_ptr[1] = (color >> 8) & 0xFF;
-        pixel_ptr[2] = (color >> 16) & 0xFF;
+        unsigned char bits = glyph[row];
+
+        for (int col = 0; col < 8; col++)
+        {
+            if (bits & (1 << (7 - col)))
+            {
+                // scaling
+                for (int dy = 0; dy < FONT_SCALE; dy++)
+                    for (int dx = 0; dx < FONT_SCALE; dx++)
+                    {
+                        fb_put_pixel(
+                            x + col * FONT_SCALE + dx,
+                            y + row * FONT_SCALE + dy,
+                            color);
+                    }
+            }
+        }
     }
 }
 
-void fb_draw_char(int x, int y, char ch, uint32_t color)
-{
-    draw_pattern(x,y,FONT_HEIGHT,FONT_WIDTH,
-             (uint8_t (*)[FONT_WIDTH])font[(int)ch],
-             color);
-}
+// ========================================
+// Clear screen
+// ========================================
 
-void fb_clear(void)
+void fb_clear()
 {
-    if (!screen.addr)
-        return;
     for (uint32_t y = 0; y < screen.height; y++)
         for (uint32_t x = 0; x < screen.width; x++)
-            fb_put_pixel(x, y, 0x000000); // black
+            fb_put_pixel(x, y, 0x000000);
 }
 
-void fb_init(uint64_t addr, uint32_t width, uint32_t height, uint32_t pitch, uint8_t bpp)
+// ========================================
+// Init framebuffer
+// ========================================
+
+void fb_init(uint64_t addr,
+             uint32_t width,
+             uint32_t height,
+             uint32_t pitch,
+             uint8_t bpp)
 {
     screen.addr = (uint32_t *)addr;
     screen.width = width;
@@ -59,48 +84,5 @@ void fb_init(uint64_t addr, uint32_t width, uint32_t height, uint32_t pitch, uin
     screen.pitch = pitch;
     screen.bpp = bpp;
 
-    // Optional: fill screen with black
-    for (uint32_t y = 0; y < height; y++)
-    {
-        for (uint32_t x = 0; x < width; x++)
-        {
-            fb_put_pixel(x, y, 0x000000);
-        }
-    }
-}
-// Custom Fonts
-
-void draw_dot(int cx, int cy, int radius, uint32_t color)
-{
-    for (int y = -radius; y <= radius; y++)
-    {
-        for (int x = -radius; x <= radius; x++)
-        {
-            if (x * x + y * y <= radius * radius)
-            {
-                fb_put_pixel(cx + x, cy + y, color);
-            }
-        }
-    }
-}
-
-void draw_pattern(int x, int y, int rows, int cols,
-                  uint8_t pattern[rows][cols],
-                  uint32_t color)
-{
-    for (int r = 0; r < rows; r++)
-    {
-        for (int c = 0; c < cols; c++)
-        {
-            if (pattern[r][c])
-            {
-                draw_dot(
-                    x + c * DOT_SPACING,
-                    y + r * DOT_SPACING,
-                    DOT_RADIUS,
-                    color
-                );
-            }
-        }
-    }
+    fb_clear();
 }

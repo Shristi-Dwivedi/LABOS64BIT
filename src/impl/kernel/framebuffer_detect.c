@@ -3,8 +3,6 @@
 #include <stdbool.h>
 #include "multiboot2.h"
 
-struct framebuffer_info screen;
-
 int framebuffer_available(void) {  
     return screen.addr != 0;
 }
