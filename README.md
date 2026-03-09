@@ -25,13 +25,13 @@ LABOS is currently in **early development (Alpha stage)**.
 ## Screenshots
 
 ### GRUB Menu
-![GRUB menu](screenshots/LABOS_GRUB_Menu.png)
+![GRUB menu](screenshots/LABOS_GRUB.png)
 
 ### Shell Interface
-![Shell](screenshots/LABOS_Shell_Commands.png)
+![Shell](screenshots/LABOS_SHELL.png)
 
 ### Boot Screen
-![Boot Screen](screenshots/LABOS_GUI_Boot.png)
+![Boot Screen](screenshots/LABOS_GUI_BOOT.png)
 
 ### GUI Screen
 ![GUI Screen](screenshots/LABOS_GUI.png)
