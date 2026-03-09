@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "shell.h"
+#include "gui.h"
 
 // I/O ports
 extern uint8_t inb(uint16_t port);
@@ -92,6 +93,9 @@ void keyboard_handler_c()
     }
 
     if (c) {
+        // if(gui_is_active()){
+        //     gui_on_key(c);
+        // }
         // letters
         if (c >= 'a' && c <= 'z') {
             if (shift_pressed ^ caps_lock) c -= 32;

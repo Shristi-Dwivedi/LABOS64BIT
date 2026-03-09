@@ -4,6 +4,8 @@
 #include "font.h"
 #include "framebuffer.h"
 #include "keyboard.h"
+#include "gui.h"
+// #include "string.h"
 
 // Console API
 
@@ -66,6 +68,8 @@ static void shell_run_command(const char* cmd) {
     if (streq(cmd, "shine")) {
         extern void outb(uint16_t port, uint8_t val);
         console_write("Entering GUI mode ...\n");
+        console_clear();
+        gui_enter();
         return;
     }
 
@@ -74,6 +78,9 @@ static void shell_run_command(const char* cmd) {
     console_putc('\n');
 }
 void shell_print_prompt(void) {
+    if(is_gui_active()){
+        return;
+    }
     console_write("LABOS :> ");
 }
 
