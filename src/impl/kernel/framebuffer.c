@@ -1,5 +1,5 @@
 #include "framebuffer.h"
-#include "font8x8.h"
+#include "font.h"
 
 static int cursor_x = 0;
 static int cursor_y = 0;
