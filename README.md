@@ -1,20 +1,44 @@
-# LABOS - 64-bit Operating System
+# LABOS : A Conceptual Operating System
 
-LABOS is a custom 64-bit operating system written in C and Assembly.
+LABOS is a bootable operating system built from scratch using **C and Assembly**.  
+This project is part of my exploration into **low-level system development, kernels, and OS architecture**.
 
-## Features (Current)
-- GRUB bootloader
-- 64-bit long mode kernel
-- VGA text output
-- Docker-based build system
+## Current Development Stage
+LABOS is currently in **early development (Alpha stage)**.
 
-## Goal
+## Features Implemented So Far
+
+- Bootloader initialization
+- Kernel loading
+- Basic screen output
+- Simple shell environment
+- Command execution framework
+
+## Features In Progress
+
 - GUI system
-- Calculator
-- Text Editor
-- Search engine
-- Custom memory manager
-- Interrupt system
+- Mouse pointer support
+- Event handling
+- Window manager
+- Basic system applications
 
-## Build
-make build-x86_64
+## Screenshots
+
+### GRUB Menu
+![GRUB menu](screenshots/LABOS_GRUB_Menu.png)
+
+### Shell Interface
+![Shell](screenshots/LABOS_Shell_Commands.png)
+
+### Boot Screen
+![Boot Screen](screenshots/LABOS_GUI_Boot.png)
+
+### GUI Screen
+![GUI Screen](screenshots/LABOS_GUI.png)
+
+## How to Run
+
+Run using **QEMU**:
+
+```bash
+qemu-system-x86_64 -cdrom kernel.iso
