@@ -41,4 +41,4 @@ LABOS is currently in **early development (Alpha stage)**.
 Run using **QEMU**:
 
 ```bash
-qemu-system-x86_64 -cdrom kernel.iso
+qemu-system-x86_64 -cdrom dist/x86_64/kernel.iso -vga std
