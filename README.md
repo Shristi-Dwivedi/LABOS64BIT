@@ -4,7 +4,7 @@ LABOS is a bootable operating system built from scratch using **C and Assembly**
 This project is part of my exploration into **low-level system development, kernels, and OS architecture**.
 
 ## Current Development Stage
-LABOS is currently in **early development (Alpha stage)**.
+LABOS is currently in **early development**.
 
 ## Features Implemented So Far
 
@@ -42,3 +42,7 @@ Run using **QEMU**:
 
 ```bash
 qemu-system-x86_64 -cdrom dist/x86_64/kernel.iso -vga std
+```
+or
+```bash
+qemu-system-x86_64 kernel.iso
