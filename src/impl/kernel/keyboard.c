@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include "shell.h"
 #include "gui.h"
+#include "cursor.h"
+#include "mouse.h"
 
 // I/O ports
 extern uint8_t inb(uint16_t port);

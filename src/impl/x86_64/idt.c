@@ -23,6 +23,7 @@ struct idtr idtr0;
 
 extern void keyboard_handler_stub();
 extern void timer_handler_stub();
+extern void mouse_handler_stub();
 extern void isr_default();
 
 // Set gate
@@ -45,6 +46,8 @@ void init_idt() {
     set_idt_gate(32, (uint64_t)timer_handler_stub);
     // Keyboard IRQ1 -> interrupt 33
     set_idt_gate(33, (uint64_t)keyboard_handler_stub);
+    // Mouse IRQ12 -> interrupt 44
+    set_idt_gate(44, (uint64_t)mouse_handler_stub);
 
     idtr0.base = (uint64_t)&idt[0];
     idtr0.limit = sizeof(idt) - 1;
