@@ -22,6 +22,11 @@ struct gui_button
 static struct gui_button connect_button;
 static struct gui_button shell_button;
 
+// App struct
+// typedef struct{
+//     int x,y,w,h;
+// }
+
 static int point_in_button(int px, int py, struct gui_button *b)
 {
     return (px >= b->x && px < b->x + b->w &&
@@ -44,9 +49,13 @@ static void delay_loop(volatile uint64_t count)
 // gui_on_key function
 
 void gui_on_key(char c){
-    if(c == '\t'){
+    if(c == 0x1B){
         shell_active = 1;
         gui_active = 0;
+    }
+    else if(c == '\t'){
+        // hover cursor position to app
+        if()
     }
 }
 
