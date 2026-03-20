@@ -165,25 +165,34 @@ static void draw_center_text(const char *s, int y, uint32_t color, int scale)
     draw_text(s, x, y, color, scale);
 }
 
-static void on_connect_click(void)
+static void desktop_mode(void)
 {
-    // draw_rect(200, 140, 320, 120, 0x00222222);
-    // draw_text("Entering Desktop", 230, 180, 0x00FFFFFF, 2);
     fb_clear();
     console_clear();
     shell_active = 0;
+    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x0656565, 0x04040404);
+    // Shell button
+    shell_button.x = 20;
+    shell_button.y = 20;
+    shell_button.w = 50;
+    shell_button.h = 50;
+    shell_button.label = "SHELL";
+
+    // Draw shell button
+    draw_rect(shell_button.x, shell_button.y, shell_button.w, shell_button.h, 0x00008000);
+    draw_text(shell_button.label, shell_button.x + 14, shell_button.y + 8, 0x00FFFFFF, 1);
 }
 
 // shell function
 
-// static void on_shell_click(void)
-// {
-//     shell_active = 1;
-//     gui_active = 0;
-//     cursor_reset();
-//     console_clear();
-//     shell_init();
-// }
+static void on_shell_click(void)
+{
+    shell_active = 1;
+    gui_active = 0;
+    cursor_reset();
+    console_clear();
+    shell_init();
+}
 
 // Boot animation window
 static void gui_boot_animation(void)
@@ -231,17 +240,6 @@ static void gui_desktop(void)
     draw_rect(connect_button.x, connect_button.y, connect_button.w, connect_button.h, 0x00008000);
     draw_text(connect_button.label, connect_button.x + 40, connect_button.y + 15, 0x00FFFFFF, 2);
 
-    // // Shell button
-    // shell_button.x = screen.width - 140;
-    // shell_button.y = 20;
-    // shell_button.w = 120;
-    // shell_button.h = 30;
-    // shell_button.label = "SHELL";
-
-    // // Draw shell button
-    // draw_rect(shell_button.x, shell_button.y, shell_button.w, shell_button.h, 0x00008000);
-    // draw_text(shell_button.label, shell_button.x + 14, shell_button.y + 8, 0x00FFFFFF, 1);
-
     // Title
     draw_text("LABOS", 300, 230, 0x00000000, 5);
 
@@ -278,12 +276,12 @@ void gui_enter(void)
         {
             if (point_in_button(mouse.x, mouse.y, &connect_button))
             {
-                on_connect_click();
+                desktop_mode();
             }
-            // if(point_in_button(mouse.x, mouse.y, &shell_button))
-            // {
-            //     on_shell_click();
-            // }
+            if(point_in_button(mouse.x, mouse.y, &shell_button))
+            {
+                on_shell_click();
+            }
             mouse.left_clicked = 0;
         }
 
