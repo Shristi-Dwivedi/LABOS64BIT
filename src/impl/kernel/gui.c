@@ -6,13 +6,12 @@
 #include "mouse.h"
 #include "cursor.h"
 #include "shell.h"
-
-static int gui_active = 0;
+#include "mode.h"
 
 #define FG 0x00FFFFFF
 #define BG 0x00000000
-#define TASKBAR 0x00222222
-#define ACCENT 0x0033A1FF
+// #define TASKBAR 0x00222222
+#define ACCENT 0x00FF0000
 
 struct gui_button
 {
@@ -21,6 +20,7 @@ struct gui_button
 };
 
 static struct gui_button connect_button;
+static struct gui_button shell_button;
 
 static int point_in_button(int px, int py, struct gui_button *b)
 {
@@ -38,6 +38,40 @@ static void delay_loop(volatile uint64_t count)
     while (count--)
     {
         cpu_relax();
+    }
+}
+
+// gui_on_key function
+
+void gui_on_key(char c){
+    if(c == '\t'){
+        shell_active = 1;
+        gui_active = 0;
+    }
+}
+
+// vertical gradient color function
+static void draw_gradient_rect(int x, int y, int w, int h, uint32_t top, uint32_t bottom)
+{
+    if (!screen.addr) return;
+
+    for (int yy = 0; yy < h; yy++)
+    {
+        uint8_t r = ((top >> 16) & 0xFF) + 
+                    ((((bottom >> 16) & 0xFF) - ((top >> 16) & 0xFF)) * yy) / h;
+
+        uint8_t g = ((top >> 8) & 0xFF) + 
+                    ((((bottom >> 8) & 0xFF) - ((top >> 8) & 0xFF)) * yy) / h;
+
+        uint8_t b = (top & 0xFF) + 
+                    (((bottom & 0xFF) - (top & 0xFF)) * yy) / h;
+
+        uint32_t color = (r << 16) | (g << 8) | b;
+
+        for (int xx = 0; xx < w; xx++)
+        {
+            fb_put_pixel(x + xx, y + yy, color);
+        }
     }
 }
 
@@ -134,16 +168,24 @@ static void draw_center_text(const char *s, int y, uint32_t color, int scale)
 static void on_connect_click(void)
 {
     // draw_rect(200, 140, 320, 120, 0x00222222);
-    // draw_text("CONNECT clicked!", 230, 180, 0x00FFFFFF, 2);
-    gui_active = 0;
+    // draw_text("Entering Desktop", 230, 180, 0x00FFFFFF, 2);
     fb_clear();
-    console_init();
-    console_write("Welcome to LABOS");
-    console_putc('\n');
-    shell_init();
+    console_clear();
+    shell_active = 0;
 }
 
-// Boot animation
+// shell function
+
+// static void on_shell_click(void)
+// {
+//     shell_active = 1;
+//     gui_active = 0;
+//     cursor_reset();
+//     console_clear();
+//     shell_init();
+// }
+
+// Boot animation window
 static void gui_boot_animation(void)
 {
     fb_clear();
@@ -172,29 +214,39 @@ static void gui_boot_animation(void)
 
 static void gui_desktop(void)
 {
-    draw_rect(0, 0, (int)screen.width, (int)screen.height, 0x00FFFF00);
-    draw_rect(0, (int)screen.height / 2, (int)screen.width, (int)screen.height / 2, 0x000A0C10);
+    // draw_rect(0, 0, (int)screen.width, (int)screen.height, 0x00A280B9);
+    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x00FF7F50, 0x001E90FF);
 
     // Taskbar
-    int tb_h = 48;
-    draw_rect(0, (int)screen.height - tb_h, (int)screen.width, tb_h, TASKBAR);
+    // int tb_h = 48;
+    // draw_rect(0, (int)screen.height - tb_h, (int)screen.width, tb_h, TASKBAR);
 
     // Connect button
-    connect_button.x = 12;
-    connect_button.y = (int)screen.height - tb_h + 10;
-    connect_button.w = 120;
-    connect_button.h = 28;
-    connect_button.label = "CONNECT SHELL";
+    connect_button.x = 310;
+    connect_button.y = 320;
+    connect_button.w = 180;
+    connect_button.h = 40;
+    connect_button.label = "SIGN IN";
 
     draw_rect(connect_button.x, connect_button.y, connect_button.w, connect_button.h, 0x00008000);
-    draw_text(connect_button.label, connect_button.x + 14, connect_button.y + 8, 0x00FFFFFF, 1);
+    draw_text(connect_button.label, connect_button.x + 40, connect_button.y + 15, 0x00FFFFFF, 2);
+
+    // // Shell button
+    // shell_button.x = screen.width - 140;
+    // shell_button.y = 20;
+    // shell_button.w = 120;
+    // shell_button.h = 30;
+    // shell_button.label = "SHELL";
+
+    // // Draw shell button
+    // draw_rect(shell_button.x, shell_button.y, shell_button.w, shell_button.h, 0x00008000);
+    // draw_text(shell_button.label, shell_button.x + 14, shell_button.y + 8, 0x00FFFFFF, 1);
 
     // Title
-    draw_text("Welcome to LABOS GUI!", 30, 30, 0x00000000, 2);
-    // draw_text("Type 'exit' to return to shell.", 30, 70, 0x00B0B0B0, 1);
+    draw_text("LABOS", 300, 230, 0x00000000, 5);
 
     // Show name
-    draw_text("Guests", 30, 100, ACCENT, 2);
+    draw_text("Shristi", 340, 280, ACCENT, 2);
 }
 
 int is_gui_active(void)
@@ -209,9 +261,16 @@ void gui_enter(void)
     {
         return;
     }
+    cursor_reset();
+    mouse_reset_state();
+
+    mouse.x = 100;
+    mouse.y = 100;
+
     gui_boot_animation();
     gui_desktop();
-    while (1)
+
+    while (gui_active)
     {
         cursor_draw();
 
@@ -221,6 +280,10 @@ void gui_enter(void)
             {
                 on_connect_click();
             }
+            // if(point_in_button(mouse.x, mouse.y, &shell_button))
+            // {
+            //     on_shell_click();
+            // }
             mouse.left_clicked = 0;
         }
 

@@ -5,11 +5,13 @@
 #include "framebuffer.h"
 #include "keyboard.h"
 #include "gui.h"
-// #include "string.h"
+#include "mouse.h"
+#include "cursor.h"
+#include "mode.h"
 
 // Console API
 
-extern void console_write(const char* s);
+extern void console_write(const char *s);
 extern void console_putc(char c);
 extern void console_backspace(void);
 extern void console_clear(void);
@@ -19,27 +21,36 @@ extern void console_clear(void);
 static char line[SHELL_MAX_LINE];
 static size_t len = 0;
 
-static int streq(const char* a , const char* b) {
-    while (*a && *b) {
-        if (*a != *b) return 0;
+static int streq(const char *a, const char *b)
+{
+    while (*a && *b)
+    {
+        if (*a != *b)
+            return 0;
         a++;
         b++;
     }
     return *a == 0 && *b == 0;
 }
 
-static int starts_with(const char* s, const char* prefix) {
-    while (*prefix) {
-        if (*s++ != *prefix++) return 0;
+static int starts_with(const char *s, const char *prefix)
+{
+    while (*prefix)
+    {
+        if (*s++ != *prefix++)
+            return 0;
     }
     return 1;
 }
 
-static void shell_run_command(const char* cmd) {
+static void shell_run_command(const char *cmd)
+{
     // empty command
-    if (cmd[0] == 0) return;
+    if (cmd[0] == 0)
+        return;
 
-    if (streq(cmd, "labos")) {
+    if (streq(cmd, "labos"))
+    {
         console_write("Commands:\n");
         console_write("  labos        - show commands\n");
         console_write("  wipe       - clear screen\n");
@@ -49,49 +60,59 @@ static void shell_run_command(const char* cmd) {
         return;
     }
 
-    if (streq(cmd, "wipe")) {
+    if (streq(cmd, "wipe"))
+    {
         console_clear();
         return;
     }
 
-    if (streq(cmd, "build")) {
+    if (streq(cmd, "build"))
+    {
         console_write("LABOS -v1.0.0\n");
         return;
     }
 
-    if (starts_with(cmd, "print ")) {
+    if (starts_with(cmd, "print "))
+    {
         console_write(cmd + 6);
         console_putc('\n');
         return;
     }
 
-    if (streq(cmd, "shine")) {
-        extern void outb(uint16_t port, uint8_t val);
-        console_write("Entering GUI mode ...\n");
-        console_clear();
-        gui_enter();
+    if (streq(cmd, "shine"))
+    {
+        shell_active = 0;
+        gui_active = 1;
+        // request_gui = 1;
         return;
     }
 
     console_write("Encountered an unknown command: ");
     console_write(cmd);
     console_putc('\n');
+    
 }
-void shell_print_prompt(void) {
-    if(is_gui_active()){
+void shell_print_prompt(void)
+{
+    if (is_gui_active())
+    {
         return;
     }
     console_write("LABOS :> ");
 }
 
-void shell_init(void) {
+void shell_init(void)
+{
     len = 0;
+    console_write("Welcome to LABOS Shell\n");
     shell_print_prompt();
 }
 
-void shell_on_key(char c) {
+void shell_on_key(char c)
+{
     // Enter
-    if (c == '\n') {
+    if (c == '\n')
+    {
         console_putc('\n');
         line[len] = 0;
         shell_run_command(line);
@@ -101,8 +122,10 @@ void shell_on_key(char c) {
     }
 
     // Backspace
-    if (c == '\b') {
-        if (len > 0) {
+    if (c == '\b')
+    {
+        if (len > 0)
+        {
             len--;
             line[len] = 0;
             console_backspace();
@@ -111,9 +134,11 @@ void shell_on_key(char c) {
     }
 
     // ignore non-printables
-    if ((unsigned char)c < 32 || (unsigned char)c > 126) return;
+    if ((unsigned char)c < 32 || (unsigned char)c > 126)
+        return;
 
-    if (len + 1 < SHELL_MAX_LINE) {
+    if (len + 1 < SHELL_MAX_LINE)
+    {
         line[len++] = c;
         line[len] = 0;
         console_putc(c);

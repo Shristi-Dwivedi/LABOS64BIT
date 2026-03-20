@@ -18,5 +18,6 @@ extern volatile struct mouse_state mouse;
 
 void mouse_init(void);
 void mouse_handler_c(void);
+void mouse_reset_state(void);
 
 #endif

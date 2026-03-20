@@ -110,5 +110,20 @@ void mouse_handler_c(void) {
     if (mouse.x >= (int)screen.width)  mouse.x = screen.width - 1;
     if (mouse.y >= (int)screen.height) mouse.y = screen.height - 1;
 
+    // fb_put_pixel(mouse.x, mouse.y, 0x00FF00); // For testing: draw green pixel at mouse position
+
     pic_send_eoi(12);
+}
+
+// reset state of mouse
+
+void mouse_reset_state(void){
+    packet_index = 0;
+
+    mouse.dx = 0;
+    mouse.dy = 0;
+    mouse.left_clicked = 0;
+    mouse.left = 0;
+    mouse.right = 0;
+    mouse.middle = 0;
 }

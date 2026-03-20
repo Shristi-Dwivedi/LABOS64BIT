@@ -8,6 +8,7 @@
 #include "cursor.h"
 #include "mouse.h"
 #include "gui.h"
+#include "mode.h"
 
 extern void init_idt();
 extern void pic_remap();
@@ -25,11 +26,19 @@ void kernel_main(uint64_t magic, uint64_t addr)
     pic_unmask(12);
     __asm__ volatile("sti"); // enable interrupts
     console_putc('\n');
-    // shell_init();
-    gui_enter();
+    shell_init();
     while (1)
     {
-        cursor_draw();
+        if(gui_active){
+            // request_gui = 0;
+            gui_enter();
+
+            cursor_reset();
+            console_clear();
+            shell_active = 1;
+            gui_active = 0;
+            shell_init();
+        }
         __asm__ volatile("hlt");
     }
 }

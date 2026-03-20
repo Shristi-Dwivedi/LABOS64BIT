@@ -3,6 +3,8 @@
 #include "gui.h"
 #include "cursor.h"
 #include "mouse.h"
+#include "mode.h"
+#include "gui.h"
 
 // I/O ports
 extern uint8_t inb(uint16_t port);
@@ -82,36 +84,47 @@ void keyboard_handler_c()
 
     // Enter
     if (c == '\n') {
-        shell_on_key('\n');
+        if(gui_active){
+            gui_on_key('\n');
+        }
+        else if(shell_active){
+            shell_on_key('\n');
+        }
         outb(0x20, 0x20);
         return;
     }
 
     // Backspace
     if (c == '\b') {
-        shell_on_key('\b');
+        if(gui_active){
+            gui_on_key('\b');
+        }
+        else if(shell_active){
+            shell_on_key('\b');
+        }
         outb(0x20, 0x20);
         return;
     }
 
     if (c) {
-        // if(gui_is_active()){
-        //     gui_on_key(c);
-        // }
-        // letters
-        if (c >= 'a' && c <= 'z') {
-            if (shift_pressed ^ caps_lock) c -= 32;
+        if(shell_active){
+            // letters
+            if (c >= 'a' && c <= 'z') {
+                if (shift_pressed ^ caps_lock) c -= 32;
+            }
+            // numbers
+            else if (c >= '0' && c <= '9') {
+                if (shift_pressed) c = shift_number_map[c - '0'];
+            }
+            // symbols
+            else if (shift_pressed) {
+                c = get_shifted_symbol(c);
+            }
+            shell_on_key(c);
         }
-        // numbers
-        else if (c >= '0' && c <= '9') {
-            if (shift_pressed) c = shift_number_map[c - '0'];
+        else if(gui_active){
+            gui_on_key(c);
         }
-        // symbols
-        else if (shift_pressed) {
-            c = get_shifted_symbol(c);
-        }
-
-        shell_on_key(c);
     }
 
     outb(0x20, 0x20);

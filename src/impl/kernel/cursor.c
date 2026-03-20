@@ -91,3 +91,8 @@ void cursor_draw(void)
     last_x = x0;
     last_y = y0;
 }
+
+void cursor_reset(void){
+    last_x = -1;
+    last_y = -1;
+}
