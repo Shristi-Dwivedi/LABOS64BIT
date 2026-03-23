@@ -10,7 +10,6 @@
 
 #define FG 0x00FFFFFF
 #define BG 0x00000000
-// #define TASKBAR 0x00222222
 #define ACCENT 0x00FF0000
 
 struct gui_button
@@ -19,18 +18,86 @@ struct gui_button
     const char *label;
 };
 
-static struct gui_button connect_button;
-static struct gui_button shell_button;
+struct gui_app
+{
+    int x, y, w, h;
+    const char *label;
+    void (*open)(void);
+};
 
-// App struct
-// typedef struct{
-//     int x,y,w,h;
-// }
+// calculator states
+
+static char calc_expr[64];
+static int calc_len = 0;
+
+static int calc_a = 0;
+static int calc_b = 0;
+static char calc_op = 0;
+static int calc_result = 0;
+static int calc_have_result = 0;
+
+struct calc_button
+{
+    int x, y, w, h;
+    const char *label;
+};
+
+static struct calc_button calc_buttons[16];
+static int calc_button_count = 0;
+
+static int calculator_active = 0;
+
+static struct gui_button connect_button;
+
+static struct gui_app shell_app;
+static struct gui_app calculator_app;
+static struct gui_app *apps[10];
+static int app_count = 0;
+static int selected_app = 0;
+static int desktop_active = 0;
+
+// Declaration for desktop function
+static void desktop_mode(void);
+
+// Helper function for calculator
+
+static int streq2(const char *a, const char *b)
+{
+    while (*a && *b)
+    {
+        if (*a != *b)
+            return 0;
+        a++;
+        b++;
+    }
+    return (*a == 0 && *b == 0);
+}
+
+static int point_in_calc_button(int px, int py, struct calc_button *b)
+{
+    return (px >= b->x && px < b->x + b->w &&
+            py >= b->y && py < b->y + b->h);
+}
+
+static void calc_clear(void)
+{
+    calc_len = 0;
+    calc_expr[0] = 0;
+    calc_a = calc_b = 0;
+    calc_op = 0;
+    calc_have_result = 0;
+}
 
 static int point_in_button(int px, int py, struct gui_button *b)
 {
     return (px >= b->x && px < b->x + b->w &&
             py >= b->y && py < b->y + b->h);
+}
+
+static int point_in_app(int px, int py, struct gui_app *a)
+{
+    return (px >= a->x && px < a->x + a->w &&
+            py >= a->y && py < a->y + a->h);
 }
 
 static inline void cpu_relax(void)
@@ -46,33 +113,20 @@ static void delay_loop(volatile uint64_t count)
     }
 }
 
-// gui_on_key function
-
-void gui_on_key(char c){
-    if(c == 0x1B){
-        shell_active = 1;
-        gui_active = 0;
-    }
-    else if(c == '\t'){
-        // hover cursor position to app
-        if()
-    }
-}
-
-// vertical gradient color function
 static void draw_gradient_rect(int x, int y, int w, int h, uint32_t top, uint32_t bottom)
 {
-    if (!screen.addr) return;
+    if (!screen.addr)
+        return;
 
     for (int yy = 0; yy < h; yy++)
     {
-        uint8_t r = ((top >> 16) & 0xFF) + 
+        uint8_t r = ((top >> 16) & 0xFF) +
                     ((((bottom >> 16) & 0xFF) - ((top >> 16) & 0xFF)) * yy) / h;
 
-        uint8_t g = ((top >> 8) & 0xFF) + 
+        uint8_t g = ((top >> 8) & 0xFF) +
                     ((((bottom >> 8) & 0xFF) - ((top >> 8) & 0xFF)) * yy) / h;
 
-        uint8_t b = (top & 0xFF) + 
+        uint8_t b = (top & 0xFF) +
                     (((bottom & 0xFF) - (top & 0xFF)) * yy) / h;
 
         uint32_t color = (r << 16) | (g << 8) | b;
@@ -88,6 +142,7 @@ static void draw_rect(int x, int y, int w, int h, uint32_t color)
 {
     if (!screen.addr)
         return;
+
     if (x < 0)
     {
         w += x;
@@ -104,6 +159,7 @@ static void draw_rect(int x, int y, int w, int h, uint32_t color)
         h = (int)screen.height - y;
     if (w <= 0 || h <= 0)
         return;
+
     for (int yy = 0; yy < h; yy++)
     {
         for (int xx = 0; xx < w; xx++)
@@ -117,6 +173,7 @@ static void draw_char8_scaled(char ch, int x, int y, uint32_t color, int scale)
 {
     if ((unsigned char)ch >= 128)
         ch = '?';
+
     for (int row = 0; row < 8; row++)
     {
         uint8_t bits = font8x8_basic[(int)ch][row];
@@ -126,6 +183,7 @@ static void draw_char8_scaled(char ch, int x, int y, uint32_t color, int scale)
             {
                 int px = x + col * scale;
                 int py = y + row * scale;
+
                 for (int sy = 0; sy < scale; sy++)
                 {
                     for (int sx = 0; sx < scale; sx++)
@@ -142,17 +200,20 @@ static void draw_text(const char *s, int x, int y, uint32_t color, int scale)
 {
     int cx = x;
     int cy = y;
+
     while (*s)
     {
         char ch = *s++;
+
         if (ch == '\n')
         {
             cx = x;
             cy += 8 * scale + 2;
             continue;
         }
+
         draw_char8_scaled(ch, cx, cy, color, scale);
-        cx += 8 * scale * 1;
+        cx += (8 * scale + 1);
     }
 }
 
@@ -174,40 +235,333 @@ static void draw_center_text(const char *s, int y, uint32_t color, int scale)
     draw_text(s, x, y, color, scale);
 }
 
+static void draw_app(struct gui_app *app, int highlighted)
+{
+    uint32_t fill = 0x00404040;
+    uint32_t border = 0x00FFFFFF;
+
+    if (highlighted)
+    {
+        fill = 0x006060A0;
+        border = 0x00FFFF00;
+    }
+
+    draw_rect(app->x, app->y, app->w, app->h, fill);
+
+    // border
+    draw_rect(app->x, app->y, app->w, 2, border);
+    draw_rect(app->x, app->y + app->h - 2, app->w, 2, border);
+    draw_rect(app->x, app->y, 2, app->h, border);
+    draw_rect(app->x + app->w - 2, app->y, 2, app->h, border);
+
+    draw_text(app->label, app->x + 8, app->y + app->h + 8, 0x00FFFFFF, 1);
+}
+
+static void redraw_apps(void)
+{
+    for (int i = 0; i < app_count; i++)
+    {
+        draw_app(apps[i], i == selected_app);
+    }
+}
+
+static void draw_calculator(void)
+{
+    calculator_active = 1;
+
+    draw_rect(180, 110, 450, 410, 0x00202020);
+
+    // title bar
+    draw_rect(180, 110, 450, 36, 0x00404040);
+    draw_text("CALCULATOR", 250, 118, 0x00FFFFFF, 1);
+
+    // display
+    draw_rect(200, 150, 400, 40, 0x00000000);
+
+    if (calc_len == 0)
+        draw_text("0", 210, 160, 0x00FFFFFF, 2);
+    else
+        draw_text(calc_expr, 210, 160, 0x00FFFFFF, 2);
+
+    int start_x = 220;
+    int start_y = 200;
+    int bw = 80;
+    int bh = 70;
+    int gap = 10;
+
+    const char *rows[4][4] = {
+        {"7", "8", "9", "/"},
+        {"4", "5", "6", "*"},
+        {"1", "2", "3", "-"},
+        {"0", "=", "C", "+"}};
+
+    calc_button_count = 0;
+
+    for (int r = 0; r < 4; r++)
+    {
+        for (int c = 0; c < 4; c++)
+        {
+            int bx = start_x + c * (bw + gap);
+            int by = start_y + r * (bh + gap);
+
+            draw_rect(bx, by, bw, bh, 0x00444444);
+            draw_text(rows[r][c], bx + 16, by + 9, 0x00FFFFFF, 1);
+
+            calc_buttons[calc_button_count].x = bx;
+            calc_buttons[calc_button_count].y = by;
+            calc_buttons[calc_button_count].w = bw;
+            calc_buttons[calc_button_count].h = bh;
+            calc_buttons[calc_button_count].label = rows[r][c];
+            calc_button_count++;
+        }
+    }
+}
+
+static void open_calculator(void)
+{
+    calc_clear();
+    draw_calculator();
+}
+
+static void open_selected_app(void)
+{
+    if (selected_app >= 0 && selected_app < app_count && apps[selected_app]->open)
+    {
+        apps[selected_app]->open();
+    }
+}
+
+// Calculator functions
+static int parse_int(const char *s)
+{
+    int v = 0;
+    int i = 0;
+    while (s[i])
+    {
+        if (s[i] < '0' || s[i] > '9')
+            break;
+        v = v * 10 + (s[i] - '0');
+        i++;
+    }
+    return v;
+}
+
+static void calc_append_char(char c)
+{
+    if (calc_len >= 63)
+        return;
+    calc_expr[calc_len++] = c;
+    calc_expr[calc_len] = 0;
+}
+
+static void calc_evaluate(void)
+{
+    int i = 0;
+    while (calc_expr[i] && !(calc_expr[i] == '+' || calc_expr[i] == '-' || calc_expr[i] == '*' || calc_expr[i] == '/'))
+        i++;
+
+    if (!calc_expr[i])
+        return;
+
+    calc_op = calc_expr[i];
+    calc_expr[i] = 0;
+
+    calc_a = parse_int(calc_expr);
+    calc_b = parse_int(&calc_expr[i + 1]);
+
+    int result = 0;
+
+    switch (calc_op)
+    {
+    case '+':
+        result = calc_a + calc_b;
+        break;
+    case '-':
+        result = calc_a - calc_b;
+        break;
+    case '*':
+        result = calc_a * calc_b;
+        break;
+    case '/':
+        if (calc_b != 0)
+            result = calc_a / calc_b;
+        else
+            result = 0;
+        break;
+    }
+
+    calc_result = result;
+    calc_have_result = 1;
+
+    // write result back into expression
+
+    calc_clear();
+
+    if (result == 0)
+    {
+        calc_expr[0] = '0';
+        calc_expr[1] = 0;
+        calc_len = 1;
+    }
+    else
+    {
+        char buf[16];
+        int pos = 0;
+        int n = result;
+
+        if (n < 0)
+        {
+            calc_expr[calc_len++] = '-';
+            n = -n;
+        }
+
+        while (n > 0)
+        {
+            buf[pos++] = '0' + (n % 10);
+            n /= 10;
+        }
+
+        for (int j = pos - 1; j >= 0; j--)
+        {
+            calc_expr[calc_len++] = buf[j];
+        }
+        calc_expr[calc_len] = 0;
+    }
+
+    draw_calculator();
+}
+
+static void calc_handle_input_char(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        calc_append_char(c);
+        draw_calculator();
+        return;
+    }
+
+    if (c == '+' || c == '-' || c == '*' || c == '/')
+    {
+        calc_append_char(c);
+        draw_calculator();
+        return;
+    }
+
+    if (c == 'c' || c == 'C')
+    {
+        calc_clear();
+        draw_calculator();
+        return;
+    }
+
+    if (c == '\b')
+    {
+        if (calc_len > 0)
+        {
+            calc_len--;
+            calc_expr[calc_len] = 0;
+        }
+        draw_calculator();
+        return;
+    }
+
+    if (c == '\n' || c == '=')
+    {
+        calc_evaluate();
+        return;
+    }
+}
+
+void gui_on_key(char c)
+{
+    if (c == 0x1B)
+    { // ESC
+        if (calculator_active)
+        {
+            calculator_active = 0;
+            calc_clear();
+            desktop_mode();
+            // desktop_active = 1;
+            return;
+        }
+        gui_active = 0;
+        shell_active = 1;
+        return;
+    }
+
+    if (calculator_active)
+    {
+        calc_handle_input_char(c);
+        return;
+    }
+
+    if (c == '\t')
+    {
+        if (app_count > 0)
+        {
+            selected_app++;
+            if (selected_app >= app_count)
+                selected_app = 0;
+            redraw_apps();
+        }
+        return;
+    }
+
+    if (c == '\n')
+    {
+        open_selected_app();
+        return;
+    }
+}
+
+static void open_shell(void)
+{
+    shell_active = 1;
+    gui_active = 0;
+}
+
 static void desktop_mode(void)
 {
     fb_clear();
     console_clear();
+
     shell_active = 0;
-    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x0656565, 0x04040404);
-    // Shell button
-    shell_button.x = 20;
-    shell_button.y = 20;
-    shell_button.w = 50;
-    shell_button.h = 50;
-    shell_button.label = "SHELL";
+    calculator_active = 0;
+    desktop_active = 1;
 
-    // Draw shell button
-    draw_rect(shell_button.x, shell_button.y, shell_button.w, shell_button.h, 0x00008000);
-    draw_text(shell_button.label, shell_button.x + 14, shell_button.y + 8, 0x00FFFFFF, 1);
+    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x0492957, 0x0744A6D);
+
+    // Shell app
+    shell_app.x = 20;
+    shell_app.y = 20;
+    shell_app.w = 90;
+    shell_app.h = 70;
+    shell_app.label = "TERMINAL";
+    shell_app.open = open_shell;
+
+    // Calculator app
+    calculator_app.x = 20;
+    calculator_app.y = 120;
+    calculator_app.w = 90;
+    calculator_app.h = 70;
+    calculator_app.label = "CALCULATOR";
+    calculator_app.open = open_calculator;
+
+    apps[0] = &shell_app;
+    apps[1] = &calculator_app;
+    app_count = 2;
+    selected_app = 0;
+
+    redraw_apps();
 }
 
-// shell function
-
-static void on_shell_click(void)
-{
-    shell_active = 1;
-    gui_active = 0;
-    cursor_reset();
-    console_clear();
-    shell_init();
-}
-
-// Boot animation window
 static void gui_boot_animation(void)
 {
     fb_clear();
+    desktop_active = 0;
+
     draw_rect(0, 0, (int)screen.width, (int)screen.height, 0x00101010);
+
     int box_w = 360, box_h = 140;
     int bx = ((int)screen.width - box_w) / 2;
     int by = ((int)screen.height - box_h) / 2 - 40;
@@ -215,31 +569,29 @@ static void gui_boot_animation(void)
     draw_rect(bx, by, box_w, box_h, 0x001A1A1A);
     draw_rect(bx, by, box_w, 4, ACCENT);
 
-    draw_center_text("LABOS", by + 35, FG, 4);
-    draw_center_text("Booting...", by + 95, 0x00CCCCCC, 1);
+    draw_center_text("LABOS", by + 35, 0x0ADFDA2, 4);
+    draw_center_text("Booting...", by + 95, 0x0ADFDA2, 2);
 
     const char *frames[] = {"[.   ]", "[..  ]", "[... ]", "[....]", "[ ...]", "[  ..]", "[   .]", "[    ]"};
     int fy = by + box_h + 30;
+
     for (int i = 0; i < 40; i++)
     {
         draw_rect(0, fy - 5, (int)screen.width, 30, 0x00101010);
         const char *f = frames[i % 8];
-        draw_center_text(f, fy, 0x00FFFFFF, 2);
-
+        draw_center_text(f, fy, ACCENT, 2);
         delay_loop(2500000);
     }
 }
 
 static void gui_desktop(void)
 {
-    // draw_rect(0, 0, (int)screen.width, (int)screen.height, 0x00A280B9);
-    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x00FF7F50, 0x001E90FF);
+    desktop_active = 0;
 
-    // Taskbar
-    // int tb_h = 48;
-    // draw_rect(0, (int)screen.height - tb_h, (int)screen.width, tb_h, TASKBAR);
+    // Sign in window
+    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x022D52D, 0x0CCB3D1);
 
-    // Connect button
+    // Sign in button
     connect_button.x = 310;
     connect_button.y = 320;
     connect_button.w = 180;
@@ -249,10 +601,7 @@ static void gui_desktop(void)
     draw_rect(connect_button.x, connect_button.y, connect_button.w, connect_button.h, 0x00008000);
     draw_text(connect_button.label, connect_button.x + 40, connect_button.y + 15, 0x00FFFFFF, 2);
 
-    // Title
     draw_text("LABOS", 300, 230, 0x00000000, 5);
-
-    // Show name
     draw_text("Shristi", 340, 280, ACCENT, 2);
 }
 
@@ -264,10 +613,12 @@ int is_gui_active(void)
 void gui_enter(void)
 {
     gui_active = 1;
+
     if (!screen.addr || screen.width == 0 || screen.height == 0)
     {
         return;
     }
+
     cursor_reset();
     mouse_reset_state();
 
@@ -283,14 +634,43 @@ void gui_enter(void)
 
         if (mouse.left_clicked)
         {
-            if (point_in_button(mouse.x, mouse.y, &connect_button))
+
+            // If calculator is open
+            if (calculator_active)
+            {
+                for (int i = 0; i < calc_button_count; i++)
+                {
+                    if (point_in_calc_button(mouse.x, mouse.y, &calc_buttons[i]))
+                    {
+                        calc_handle_input_char(calc_buttons[i].label[0]);
+                    }
+                }
+
+                mouse.left_clicked = 0;
+                __asm__ volatile("hlt");
+                continue;
+            }
+
+            // Sign in screen
+            if (!desktop_active && point_in_button(mouse.x, mouse.y, &connect_button))
             {
                 desktop_mode();
             }
-            if(point_in_button(mouse.x, mouse.y, &shell_button))
+
+            // Desktop apps
+            if (desktop_active)
             {
-                on_shell_click();
+                for (int i = 0; i < app_count; i++)
+                {
+                    if (point_in_app(mouse.x, mouse.y, apps[i]))
+                    {
+                        selected_app = i;
+                        redraw_apps();
+                        open_selected_app();
+                    }
+                }
             }
+
             mouse.left_clicked = 0;
         }
 

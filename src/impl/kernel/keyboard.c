@@ -27,6 +27,9 @@ static const char keymap[128] =
     0,  '\\','z','x','c','v','b','n','m',',','.','/',
     0,  '*',
     0,  ' ',
+
+    [0x4A] = '-',
+    [0x4E] = '+',
 };
 
 static const char shift_number_map[10] = {
@@ -89,6 +92,18 @@ void keyboard_handler_c()
         }
         else if(shell_active){
             shell_on_key('\n');
+        }
+        outb(0x20, 0x20);
+        return;
+    }
+
+    // TAB
+    if (c == '\t') {
+        if(gui_active){
+            gui_on_key('\t');
+        }
+        else if(shell_active){
+            shell_on_key('\t');
         }
         outb(0x20, 0x20);
         return;
