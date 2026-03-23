@@ -13,14 +13,17 @@ LABOS is currently in **early development**.
 - Basic screen output
 - Simple shell environment
 - Command execution framework
+- Mouse support
+- GUI booting
+- Desktop Loading
+- 2 basic applications
+- Implementation of Calculator app
 
 ## Features In Progress
 
 - GUI system
-- Mouse pointer support
 - Event handling
 - Window manager
-- Basic system applications
 
 ## Screenshots
 
@@ -35,6 +38,12 @@ LABOS is currently in **early development**.
 
 ### GUI Screen
 ![GUI Screen](screenshots/LABOS_GUI.png)
+
+### Desktop
+![Desktop Screen](screenshots/LABOS_Desktop.png)
+
+### Calculator
+![Calculator](screenshots/LABOS_Calc.png)
 
 ## How to Run
 
