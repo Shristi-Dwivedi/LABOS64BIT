@@ -5,3 +5,5 @@ dist/
 *.o
 *.elf
 *.log
+fat32.img
+*.imgfat32.img
