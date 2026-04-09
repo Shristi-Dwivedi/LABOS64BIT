@@ -1,9 +1,4 @@
 build/
 dist/
 *.iso
-*.bin
-*.o
-*.elf
-*.log
-fat32.img
-*.imgfat32.img
+*.img
