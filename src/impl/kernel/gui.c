@@ -7,6 +7,7 @@
 #include "cursor.h"
 #include "shell.h"
 #include "mode.h"
+#include "notepad.h"
 
 #define FG 0x00FFFFFF
 #define BG 0x00000000
@@ -24,6 +25,14 @@ struct gui_app
     const char *label;
     void (*open)(void);
 };
+
+// Notepad structure
+
+static struct gui_app notepad_app;
+
+static void open_notepad_app(void){
+    open_notepad();
+}
 
 // calculator states
 
@@ -56,9 +65,9 @@ static int app_count = 0;
 static int selected_app = 0;
 static int desktop_active = 0;
 
-// Declaration for desktop function
-static void desktop_mode(void);
+static int signin_selected = 1;
 
+static void draw_signin_button(int highlighted);
 // Helper function for calculator
 
 static int streq2(const char *a, const char *b)
@@ -474,6 +483,10 @@ static void calc_handle_input_char(char c)
 
 void gui_on_key(char c)
 {
+    if(is_notepad_active()){
+        notepad_on_key(c);
+        return;
+    }
     if (c == 0x1B)
     { // ESC
         if (calculator_active)
@@ -492,6 +505,22 @@ void gui_on_key(char c)
     if (calculator_active)
     {
         calc_handle_input_char(c);
+        return;
+    }
+
+    // Sign-in
+    if(!desktop_active){
+        if(c == '\t'){
+            signin_selected = 1;
+            draw_signin_button(signin_selected);
+            return;
+        }
+        else if(c == '\n'){
+            if(signin_selected){
+                desktop_mode();
+            }
+            return;
+        }
         return;
     }
 
@@ -520,7 +549,7 @@ static void open_shell(void)
     gui_active = 0;
 }
 
-static void desktop_mode(void)
+void desktop_mode(void)
 {
     fb_clear();
     console_clear();
@@ -547,9 +576,18 @@ static void desktop_mode(void)
     calculator_app.label = "CALCULATOR";
     calculator_app.open = open_calculator;
 
+    // Notepad app
+    notepad_app.x = 20;
+    notepad_app.y = 220;
+    notepad_app.w = 90;
+    notepad_app.h = 70;
+    notepad_app.label = "NOTEPAD";
+    notepad_app.open = open_notepad_app;
+
     apps[0] = &shell_app;
     apps[1] = &calculator_app;
-    app_count = 2;
+    apps[2] = &notepad_app;
+    app_count = 3;
     selected_app = 0;
 
     redraw_apps();
@@ -598,8 +636,8 @@ static void gui_desktop(void)
     connect_button.h = 40;
     connect_button.label = "SIGN IN";
 
-    draw_rect(connect_button.x, connect_button.y, connect_button.w, connect_button.h, 0x00008000);
-    draw_text(connect_button.label, connect_button.x + 40, connect_button.y + 15, 0x00FFFFFF, 2);
+    signin_selected = 1;
+    draw_signin_button(signin_selected);
 
     draw_text("LABOS", 300, 230, 0x00000000, 5);
     draw_text("Shristi", 340, 280, ACCENT, 2);
@@ -676,4 +714,25 @@ void gui_enter(void)
 
         __asm__ volatile("hlt");
     }
+}
+
+// Signin button focus draw
+static void draw_signin_button(int highlighted){
+    uint32_t fill = 0x00008000;
+    uint32_t border = 0x00FFFFFF;
+
+    if(highlighted){
+        fill = 0x0000AA00;
+        border = 0x00FFFF00;
+    }
+
+    draw_rect(connect_button.x, connect_button.y, connect_button.w, connect_button.h, fill);
+
+    // border
+    draw_rect(connect_button.x, connect_button.y, connect_button.w, 2, border);
+    draw_rect(connect_button.x, connect_button.y + connect_button.h - 2, connect_button.w, 2, border);
+    draw_rect(connect_button.x, connect_button.y, 2, connect_button.h, border);
+    draw_rect(connect_button.x + connect_button.w - 2, connect_button.y, 2, connect_button.h, border);
+
+    draw_text(connect_button.label, connect_button.x + 40, connect_button.y + 15, 0x00FFFFFF, 2);
 }

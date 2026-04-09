@@ -14,6 +14,8 @@ extern void init_idt();
 extern void pic_remap();
 extern void pic_unmask(uint8_t irq);
 
+uint8_t sector[512];
+
 void kernel_main(uint64_t magic, uint64_t addr)
 {
     parse_multiboot2(addr); // framebuffer filled here
@@ -29,7 +31,8 @@ void kernel_main(uint64_t magic, uint64_t addr)
     shell_init();
     while (1)
     {
-        if(gui_active){
+        if (gui_active)
+        {
             // request_gui = 0;
             gui_enter();
 
