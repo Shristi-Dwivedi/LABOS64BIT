@@ -56,7 +56,7 @@ This project demonstrates hands-on experience in OS development, memory handling
 - Emulation: QEMU
 - Web Demo: noVNC + Websockify + ngrok
 
-  ## 🌐 Live Demo
+## 🌐 Live Demo
 
 A live demo of LABOS is available and can be accessed on request.
 
@@ -64,8 +64,6 @@ A live demo of LABOS is available and can be accessed on request.
 
 📩 Feel free to reach out to request access to the live demo.
 Email : shristidwivedi204@gmail.com
-
----
 
 ---
 ## Screenshots
