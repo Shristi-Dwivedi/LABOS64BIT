@@ -30,7 +30,8 @@ struct gui_app
 
 static struct gui_app notepad_app;
 
-static void open_notepad_app(void){
+static void open_notepad_app(void)
+{
     open_notepad();
 }
 
@@ -56,23 +57,59 @@ static int calc_button_count = 0;
 
 static int calculator_active = 0;
 
+// Tic-Tac-Toe states
+static int ttt_board[9]; // 3x3 grid
+static int tictactoe_active = 0;
+static int ttt_current_player = 0;
+static int ttt_game_over = 0;
+static int ttt_selected = 0;
+static int ttt_winner = 0;
+
+// Tic-Tac-Toe prototype functions
+static void open_tictactoe(void);
+static void draw_tictactoe(void);
+static void ttt_reset(void);
+static void ttt_check_winner(void);
+static void ttt_place_at(int idx);
+static void ttt_on_click(int mx, int my);
+static void ttt_on_key(char c);
+static void ttt_move_selection(int dir);
+
+// GUI connect button
 static struct gui_button connect_button;
 
 static struct gui_app shell_app;
 static struct gui_app calculator_app;
+static struct gui_app tictactoe_app;
 static struct gui_app *apps[10];
 static int app_count = 0;
 static int selected_app = 0;
 static int desktop_active = 0;
 
-static int signin_selected = 1;
+static int signin_selected = 0;
 
 static void draw_signin_button(int highlighted);
-// Helper function for calculator
 
+// Icons prototype functions
+static void draw_shell_icons(int x, int y);
+static void draw_calc_icons(int x, int y);
+static void draw_notepad_icons(int x, int y);
+static void draw_game_icons(int x, int y);
+
+// streq2 helper functions
 static int streq2(const char *a, const char *b)
 {
     while (*a && *b)
+    {
+        if (*a != *b)
+            return 0;
+        a++;
+        b++;
+    }
+    return (*a == 0 && *b == 0);
+}
+static int streq(const char *a, const char *b){
+    while(*a && *b)
     {
         if (*a != *b)
             return 0;
@@ -263,6 +300,20 @@ static void draw_app(struct gui_app *app, int highlighted)
     draw_rect(app->x, app->y, 2, app->h, border);
     draw_rect(app->x + app->w - 2, app->y, 2, app->h, border);
 
+    // Render icons
+    if(streq(app->label,"TERMINAL")){
+        draw_shell_icons(app->x+10, app->y+6);
+    }
+    else if(streq(app->label,"CALCULATOR")){
+        draw_calc_icons(app->x+10, app->y+6);
+    }
+    else if(streq(app->label,"NOTEPAD")){
+        draw_notepad_icons(app->x+10, app->y+6);
+    }
+    else if(streq(app->label,"GAME XO")){
+        draw_game_icons(app->x+10, app->y+6);
+    }
+
     draw_text(app->label, app->x + 8, app->y + app->h + 8, 0x00FFFFFF, 1);
 }
 
@@ -273,6 +324,302 @@ static void redraw_apps(void)
         draw_app(apps[i], i == selected_app);
     }
 }
+
+// Icons helper functions
+// 1) Shell
+static void draw_shell_icons(int x, int y){
+    // terminal window
+    draw_rect(x-8, y-5, 85, 68, 0x00222222);
+    draw_rect(x-8, y-5, 85, 20, 0x00FFFFFF);
+    // prompt
+    draw_text(">", x+30, y+30, 0x00FFFFFF, 2);
+    // underscore cursor
+    draw_rect(x+28, y+48 , 20, 3, 0x00FFFFFF);
+}
+// 2) Calculator
+static void draw_calc_icons(int x, int y)
+{
+    // Calculator box
+    draw_rect(x-8, y-5, 85, 68, 0x006666FF);
+    draw_rect(x-8, y-5, 85, 34, 0x00FFFF99);
+    // Display
+    draw_text("+", x+5, y+10, 0x00000000, 3);
+    draw_text("-", x+45, y+10, 0x00000000, 3);
+    draw_text("*", x+5, y+40, 0x00000000, 3);
+    draw_text("/", x+45, y+40, 0x00000000, 3);
+}
+// 3) Notepad
+static void draw_notepad_icons(int x, int y){
+    // notepad box
+    draw_rect(x-8, y-5, 85, 68, 0x0066FF66);
+    draw_rect(x-8, y-5, 85, 34, 0x00CCFFCC);
+    // Display text
+    draw_text("N", x+25, y+20, 0x00000000, 3);
+}
+// 4) Game
+static void draw_game_icons(int x, int y){
+    // game box
+    draw_rect(x-8, y-5, 85, 68, 0x00FF6666);
+    // display
+    draw_rect(x+25, y+8, 2, 45, 0x00000000);
+    draw_rect(x+50, y+8, 2, 45, 0x0000000);
+    // cross-line
+    draw_rect(x+10, y+18, 50, 2, 0x00000000);
+    draw_rect(x+10, y+38, 50, 2, 0x00000000);
+    // XO display
+    draw_text("X", x+10, y+10, 0x00000000, 1);
+    draw_text("O", x+53, y+43, 0x00000000, 1);
+}
+
+// Tic-Tac_toe helper functions
+static void open_tictactoe(void)
+{
+    tictactoe_active = 1;
+    calculator_active = 0;
+    desktop_active = 0;
+    ttt_reset();
+    draw_tictactoe();
+}
+
+static void ttt_reset(void)
+{
+    for (int i = 0; i < 9; i++)
+        ttt_board[i] = ' ';
+
+    ttt_current_player = 0;
+    ttt_game_over = 0;
+    ttt_winner = 0;
+    ttt_selected = 0;
+}
+
+static void ttt_check_winner(void)
+{
+    int wins[8][3] = {
+        {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6}, {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}};
+
+    for (int i = 0; i < 8; i++)
+    {
+        int a = wins[i][0];
+        int b = wins[i][1];
+        int c = wins[i][2];
+
+        if (ttt_board[a] != ' ' &&
+            ttt_board[a] == ttt_board[b] &&
+            ttt_board[b] == ttt_board[c])
+        {
+            ttt_game_over = 1;
+            ttt_winner = ttt_board[a];
+            return;
+        }
+    }
+
+    int full = 1;
+    for (int i = 0; i < 9; i++)
+    {
+        if (ttt_board[i] == ' ')
+        {
+            full = 0;
+            break;
+        }
+    }
+
+    if (full)
+    {
+        ttt_game_over = 1;
+        ttt_winner = 'D';
+    }
+}
+
+static void ttt_place_at(int idx)
+{
+    if (idx < 0 || idx >= 9)
+        return;
+    if (ttt_game_over)
+        return;
+    if (ttt_board[idx] != ' ')
+        return;
+
+    if (ttt_current_player == 0)
+        ttt_board[idx] = 'X';
+    else
+        ttt_board[idx] = 'O';
+
+    ttt_check_winner();
+
+    if (!ttt_game_over)
+        ttt_current_player = 1 - ttt_current_player;
+
+    draw_tictactoe();
+}
+
+static void ttt_move_selection(int dir)
+{
+    int row = ttt_selected / 3;
+    int col = ttt_selected % 3;
+
+    if (dir == 0 && row > 0)
+        row--; // up
+    if (dir == 1 && row < 2)
+        row++; // down
+    if (dir == 2 && col > 0)
+        col--; // left
+    if (dir == 3 && col < 2)
+        col++; // right
+
+    ttt_selected = row * 3 + col;
+    draw_tictactoe();
+}
+
+static void ttt_on_key(char c)
+{
+    if (c == 0x1B)
+    { // ESC
+        tictactoe_active = 0;
+        desktop_mode();
+        return;
+    }
+
+    if (c == 'r' || c == 'R')
+    {
+        ttt_reset();
+        draw_tictactoe();
+        return;
+    }
+
+    if(c == 'w' || c == 'W')
+    {
+        ttt_move_selection(0);
+        return;
+    }
+    if (c == 's' || c == 'S')
+    {
+        ttt_move_selection(1);
+        return;
+    }
+    if (c == 'a' || c == 'A')
+    {
+        ttt_move_selection(2);
+        return;
+    }
+    if (c == 'd' || c == 'D')
+    {
+        ttt_move_selection(3);
+        return;
+    }
+    if (c == '\t')
+    {
+        ttt_selected++;
+        if (ttt_selected >= 9)
+            ttt_selected = 0;
+        draw_tictactoe();
+        return;
+    }
+
+    if (c == '\n' || c == ' ')
+    {
+        ttt_place_at(ttt_selected);
+        return;
+    }
+
+    // optional direct numeric keyboard play
+    if (c >= '1' && c <= '9')
+    {
+        int idx = c - '1';
+        ttt_selected = idx;
+        ttt_place_at(idx);
+        return;
+    }
+}
+
+static void ttt_on_click(int mx, int my)
+{
+    int start_x = 250;
+    int start_y = 140;
+    int cell = 80;
+
+    if (mx < start_x || my < start_y)
+        return;
+    if (mx >= start_x + cell * 3 || my >= start_y + cell * 3)
+        return;
+
+    int col = (mx - start_x) / cell;
+    int row = (my - start_y) / cell;
+
+    int idx = row * 3 + col;
+    ttt_selected = idx;
+    ttt_place_at(idx);
+}
+
+static void draw_tictactoe(void)
+{
+    fb_clear();
+    draw_gradient_rect(0, -18, (int)screen.width, (int)screen.height, 0x00404080, 0x00202040);
+
+    draw_text("TIC-TAC-TOE", 240, 35, 0x00FFFFFF, 3);
+    draw_text("ARROWS/TAB = MOVE", 220, 75, 0x00FFFF00, 1);
+    draw_text("ENTER/SPACE = PLACE", 220, 92, 0x00FFFF00, 1);
+    draw_text("R = RESET | ESC = EXIT", 220, 109, 0x00FFFF00, 1);
+
+    int start_x = 250;
+    int start_y = 140;
+    int cell = 80;
+    int line = 4;
+
+    // highlight selected cell
+    int sel_row = ttt_selected / 3;
+    int sel_col = ttt_selected % 3;
+    int sel_x = start_x + sel_col * cell;
+    int sel_y = start_y + sel_row * cell;
+
+    draw_rect(sel_x, sel_y, cell, cell, 0x00333366);
+    draw_rect(sel_x, sel_y, cell, 2, 0x00FFFF00);
+    draw_rect(sel_x, sel_y + cell - 2, cell, 2, 0x00FFFF00);
+    draw_rect(sel_x, sel_y, 2, cell, 0x00FFFF00);
+    draw_rect(sel_x + cell - 2, sel_y, 2, cell, 0x00FFFF00);
+
+    // grid
+    draw_rect(start_x + cell, start_y, line, cell * 3, 0x00FFFFFF);
+    draw_rect(start_x + cell * 2, start_y, line, cell * 3, 0x00FFFFFF);
+    draw_rect(start_x, start_y + cell, cell * 3, line, 0x00FFFFFF);
+    draw_rect(start_x, start_y + cell * 2, cell * 3, line, 0x00FFFFFF);
+
+    // marks
+    for (int i = 0; i < 9; i++)
+    {
+        int row = i / 3;
+        int col = i % 3;
+        int x = start_x + col * cell + 28;
+        int y = start_y + row * cell + 18;
+
+        if (ttt_board[i] == 'X')
+        {
+            draw_text("X", x, y, 0x00FF4444, 3);
+        }
+        else if (ttt_board[i] == 'O')
+        {
+            draw_text("O", x, y, 0x0044FF44, 3);
+        }
+    }
+
+    if (!ttt_game_over)
+    {
+        if (ttt_current_player == 0)
+            draw_text("TURN: X", 285, 400, 0x00FF4444, 2);
+        else
+            draw_text("TURN: O", 285, 400, 0x0044FF44, 2);
+    }
+    else
+    {
+        if (ttt_winner == 'X')
+            draw_text("WINNER: X", 260, 400, 0x00FF4444, 2);
+        else if (ttt_winner == 'O')
+            draw_text("WINNER: O", 260, 400, 0x0044FF44, 2);
+        else
+            draw_text("DRAW", 320, 400, 0x00FFFFFF, 2);
+    }
+}
+
+// Calculator helper functions
 
 static void draw_calculator(void)
 {
@@ -483,7 +830,8 @@ static void calc_handle_input_char(char c)
 
 void gui_on_key(char c)
 {
-    if(is_notepad_active()){
+    if (is_notepad_active())
+    {
         notepad_on_key(c);
         return;
     }
@@ -494,11 +842,22 @@ void gui_on_key(char c)
             calculator_active = 0;
             calc_clear();
             desktop_mode();
-            // desktop_active = 1;
+            return;
+        }
+        else if(tictactoe_active)
+        {
+            tictactoe_active = 0;
+            desktop_mode();
             return;
         }
         gui_active = 0;
         shell_active = 1;
+        return;
+    }
+
+    if (tictactoe_active)
+    {
+        ttt_on_key(c);
         return;
     }
 
@@ -509,20 +868,26 @@ void gui_on_key(char c)
     }
 
     // Sign-in
-    if(!desktop_active){
-        if(c == '\t'){
+    if (!desktop_active)
+    {
+        if (c == '\t')
+        {
             signin_selected = 1;
             draw_signin_button(signin_selected);
             return;
         }
-        else if(c == '\n'){
-            if(signin_selected){
+        else if (c == '\n')
+        {
+            if (signin_selected)
+            {
                 desktop_mode();
             }
             return;
         }
         return;
     }
+
+    
 
     if (c == '\t')
     {
@@ -584,10 +949,19 @@ void desktop_mode(void)
     notepad_app.label = "NOTEPAD";
     notepad_app.open = open_notepad_app;
 
+    // Tic-Tac-Toe app
+    tictactoe_app.x = 20;
+    tictactoe_app.y = 320;
+    tictactoe_app.w = 90;
+    tictactoe_app.h = 70;
+    tictactoe_app.label = "GAME XO";
+    tictactoe_app.open = open_tictactoe;
+
     apps[0] = &shell_app;
     apps[1] = &calculator_app;
     apps[2] = &notepad_app;
-    app_count = 3;
+    apps[3] = &tictactoe_app;
+    app_count = 4;
     selected_app = 0;
 
     redraw_apps();
@@ -636,7 +1010,7 @@ static void gui_desktop(void)
     connect_button.h = 40;
     connect_button.label = "SIGN IN";
 
-    signin_selected = 1;
+    signin_selected = 0;
     draw_signin_button(signin_selected);
 
     draw_text("LABOS", 300, 230, 0x00000000, 5);
@@ -689,6 +1063,14 @@ void gui_enter(void)
                 continue;
             }
 
+            if (tictactoe_active)
+            {
+                ttt_on_click(mouse.x, mouse.y);
+                mouse.left_clicked = 0;
+                __asm__ volatile("hlt");
+                continue;
+            }
+
             // Sign in screen
             if (!desktop_active && point_in_button(mouse.x, mouse.y, &connect_button))
             {
@@ -717,11 +1099,13 @@ void gui_enter(void)
 }
 
 // Signin button focus draw
-static void draw_signin_button(int highlighted){
+static void draw_signin_button(int highlighted)
+{
     uint32_t fill = 0x00008000;
     uint32_t border = 0x00FFFFFF;
 
-    if(highlighted){
+    if (highlighted)
+    {
         fill = 0x0000AA00;
         border = 0x00FFFF00;
     }

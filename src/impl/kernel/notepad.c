@@ -132,7 +132,7 @@ static void draw_notepad(void)
     np_draw_rect(NP_X + 8, NP_Y + NP_TITLE_H + 8, NP_W - 16, NP_H - NP_TITLE_H - 16, 0x00000000);
 
     // render text buffer
-    np_draw_text(note_buffer, NP_TEXT_X, NP_TEXT_Y, 0x00FFFFFF, 1);
+    np_draw_text(note_buffer, NP_TEXT_X, NP_TEXT_Y, 0x00FFFFFF, 2);
 }
 
 int is_notepad_active(void)
