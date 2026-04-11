@@ -88,6 +88,18 @@ Email : shristidwivedi204@gmail.com
 ### Calculator
 ![Calculator](screenshots/LABOS_Calc.png)
 
+### Updated GUI
+![GUI](screenshots/LABOS_mainGUI.png)
+
+### Notepad
+![Notepad](screenshots/LABOS_notepad.png)
+
+### Tic-Tac-Toe Welcome screen
+![Game](screenshots/LABOS_game.png)
+
+### Tic-Tac-Toe Winning screen
+![Game](screenshots/LABOS_game2.png)
+
 ## How to Run
 
 Run using **QEMU**:
